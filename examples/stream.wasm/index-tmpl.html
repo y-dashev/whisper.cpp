@@ -29,7 +29,7 @@
     </head>
     <body>
         <div id="main-container">
-            <b>stream : Real-time Whisper transcription in WebAssembly</b>
+            <!-- <b>stream : Real-time Whisper transcription in WebAssembly</b>
 
             <br><br>
 
@@ -45,7 +45,7 @@
 
             <br><br>
 
-            <hr>
+            <hr> -->
 
             Select the model you would like to use, click the "Start" button and start speaking
 
@@ -85,7 +85,7 @@
             <hr>
 
             Debug output:
-            <textarea id="output" rows="20"></textarea>
+            <textarea id="output" rows="10000"></textarea>
 
             <br>
 
@@ -250,7 +250,7 @@
                     context = new AudioContext({
                         sampleRate: kSampleRate,
                         channelCount: 1,
-                        echoCancellation: false,
+                        echoCancellation: true,
                         autoGainControl:  true,
                         noiseSuppression: true,
                     });
