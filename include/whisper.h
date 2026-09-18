@@ -198,6 +198,8 @@ extern "C" {
         float samples_overlap;         // Overlap in seconds when copying audio samples from speech segment.
     } whisper_vad_params;
 
+    WHISPER_API const char * whisper_version(void);
+
     // Various functions for loading a ggml whisper model.
     // Allocate (almost) all memory needed for the model.
     // Return NULL on failure
@@ -523,6 +525,7 @@ extern "C" {
         // use whisper_tokenize() to convert text to tokens
         // maximum of whisper_n_text_ctx()/2 tokens are used (typically 224)
         const char * initial_prompt;
+        bool carry_initial_prompt; // if true, always prepend initial_prompt to every decode window (may reduce conditioning on previous text)
         const whisper_token * prompt_tokens;
         int prompt_n_tokens;
 
@@ -664,9 +667,30 @@ extern "C" {
     WHISPER_API whisper_token_data whisper_full_get_token_data           (struct whisper_context * ctx, int i_segment, int i_token);
     WHISPER_API whisper_token_data whisper_full_get_token_data_from_state(struct whisper_state * state, int i_segment, int i_token);
 
+    // Get the start/end time of the specified token, in centiseconds. When VAD is enabled
+    // these are mapped back to the original audio timeline (a token landing in a removed
+    // inter-segment silence snaps to the nearest speech boundary), unlike
+    // whisper_full_get_token_data().t0/t1 which stay in VAD-processed time. Without VAD the
+    // raw token times are returned unchanged.
+    WHISPER_API int64_t whisper_full_get_token_t0           (struct whisper_context * ctx, int i_segment, int i_token);
+    WHISPER_API int64_t whisper_full_get_token_t0_from_state(struct whisper_state * state, int i_segment, int i_token);
+    WHISPER_API int64_t whisper_full_get_token_t1           (struct whisper_context * ctx, int i_segment, int i_token);
+    WHISPER_API int64_t whisper_full_get_token_t1_from_state(struct whisper_state * state, int i_segment, int i_token);
+
     // Get the probability of the specified token in the specified segment
     WHISPER_API float whisper_full_get_token_p           (struct whisper_context * ctx, int i_segment, int i_token);
     WHISPER_API float whisper_full_get_token_p_from_state(struct whisper_state * state, int i_segment, int i_token);
+
+    // Access the speech segments detected by the internal VAD (only when params.vad = true).
+    // Times are on the original audio timeline, in centiseconds. The count is 0 when VAD was
+    // not used, so callers can reuse whisper's own speech boundaries instead of running a
+    // separate VAD pass.
+    WHISPER_API int     whisper_full_n_vad_segments               (struct whisper_context * ctx);
+    WHISPER_API int     whisper_full_n_vad_segments_from_state    (struct whisper_state * state);
+    WHISPER_API int64_t whisper_full_get_vad_segment_t0           (struct whisper_context * ctx, int i);
+    WHISPER_API int64_t whisper_full_get_vad_segment_t0_from_state(struct whisper_state * state, int i);
+    WHISPER_API int64_t whisper_full_get_vad_segment_t1           (struct whisper_context * ctx, int i);
+    WHISPER_API int64_t whisper_full_get_vad_segment_t1_from_state(struct whisper_state * state, int i);
 
     //
     // Voice Activity Detection (VAD)
@@ -691,6 +715,16 @@ extern "C" {
             struct whisper_vad_context * vctx,
                            const float * samples,
                                    int   n_samples);
+
+    // Like whisper_vad_detect_speech, but does not reset LSTM state.
+    // Use for streaming: call whisper_vad_reset_state() between utterances.
+    WHISPER_API bool whisper_vad_detect_speech_no_reset(
+            struct whisper_vad_context * vctx,
+                           const float * samples,
+                                   int   n_samples);
+
+    // Reset LSTM hidden/cell states to zero.
+    WHISPER_API void whisper_vad_reset_state(struct whisper_vad_context * vctx);
 
     WHISPER_API int     whisper_vad_n_probs(struct whisper_vad_context * vctx);
     WHISPER_API float * whisper_vad_probs  (struct whisper_vad_context * vctx);

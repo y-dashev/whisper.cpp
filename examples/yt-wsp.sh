@@ -39,7 +39,11 @@
 set -Eeuo pipefail
 
 # get script file location
-SCRIPT_PATH="$(realpath -e ${BASH_SOURCE[0]})";
+if [ -x "$(command -v realpath)" ]; then
+    SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]}")"
+else
+    SCRIPT_PATH="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)/$(basename -- "${BASH_SOURCE[0]}")"
+fi
 SCRIPT_DIR="${SCRIPT_PATH%/*}"
 
 ################################################################################
@@ -80,15 +84,41 @@ cleanup() {
 }
 
 print_help() {
-    echo "################################################################################"
-    echo "Usage: ./examples/yt-wsp.sh <video_url>"
-    echo "# See configurable env variables in the script; there are many!"
-    echo "# This script will produce an MP4 muxed file in the working directory; it will"
-    echo "# be named for the title and id of the video."
-    echo "# passing in https://youtu.be/VYJtb2YXae8 produces a file named";
-    echo "# 'Why_we_all_need_subtitles_now-VYJtb2YXae8-res.mp4'"
-    echo "# Requirements: ffmpeg yt-dlp whisper.cpp"
-    echo "################################################################################"
+    cat << 'EOF'
+Usage:
+  MODEL_PATH=<model> \
+  WHISPER_EXECUTABLE=<whisper-cli> \
+  WHISPER_LANG=en \
+  WHISPER_THREAD_COUNT=<int> \
+  ./examples/yt-wsp.sh <video_url>
+
+Description:
+  This script downloads a YouTube video, generates subtitles using Whisper, 
+  and muxes them into an MP4 output file.
+
+Output:
+  An MP4 file with embedded subtitles will be produced in the working directory.
+  The file will be named using the video title and ID.
+  Example: 
+    Input:  https://youtu.be/VYJtb2YXae8
+    Output: Why_we_all_need_subtitles_now-VYJtb2YXae8-res.mp4
+
+Requirements:
+  - ffmpeg
+  - yt-dlp
+  - whisper.cpp
+
+Environment Variables:
+  MODEL_PATH            Path to the Whisper model (e.g., models/ggml-base.en.bin)
+  WHISPER_EXECUTABLE    Path to the Whisper CLI executable
+  WHISPER_LANG          Language code (e.g., 'en' for English)
+  WHISPER_THREAD_COUNT  Number of CPU threads to use
+
+Tip:
+  The script has many configurable environment variables.
+  Review the source code to explore all options.
+
+EOF
 }
 
 check_requirements() {

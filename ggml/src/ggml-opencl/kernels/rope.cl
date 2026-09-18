@@ -75,7 +75,8 @@ kernel void kernel_rope_norm_f32(
         float ext_factor,
         float attn_factor,
         float beta_fast,
-        float beta_slow
+        float beta_slow,
+        int n_offs
 ) {
     src0 = (global void*)((global char*)src0 + offset0);
     src1 = (global int*)((global char*)src1 + offset1);
@@ -94,14 +95,15 @@ kernel void kernel_rope_norm_f32(
     float inv_ndims = -1.f/n_dims;
 
     for (int i0 = 2*get_local_id(0); i0 < ne0; i0 += 2*get_local_size(0)) {
-        if (i0 < n_dims) {
-            int ic = i0/2;
+        if (i0 >= n_offs && i0 < n_offs + n_dims) {
+            int iw = i0 - n_offs; // relative idx
+            int ic = iw/2;
 
-            float theta = theta_base * pow(freq_base, inv_ndims*i0);
+            float theta = theta_base * pow(freq_base, inv_ndims*iw);
 
             float freq_factor = src2 != src0 ? src2[ic] : 1.0f;
 
-            float2 cos_sin_theta = rope_yarn(theta/freq_factor, freq_scale, corr_dims, i0, ext_factor, attn_factor);
+            float2 cos_sin_theta = rope_yarn(theta/freq_factor, freq_scale, corr_dims, iw, ext_factor, attn_factor);
 
             global float * src       = (global float *)((global char *) src0 + i3*nb03 + i2*nb02 + i1*nb01 + i0*nb00);
             global float * dst_data  = (global float *)((global char *)  dst + i3*nb3  + i2*nb2  + i1*nb1  + i0*nb0);
@@ -154,7 +156,8 @@ kernel void kernel_rope_norm_f16(
         float ext_factor,
         float attn_factor,
         float beta_fast,
-        float beta_slow
+        float beta_slow,
+        int n_offs
 ) {
     src0 = (global void*)((global char*)src0 + offset0);
     src1 = (global int*)((global char*)src1 + offset1);
@@ -173,14 +176,15 @@ kernel void kernel_rope_norm_f16(
     float inv_ndims = -1.f/n_dims;
 
     for (int i0 = 2*get_local_id(0); i0 < ne0; i0 += 2*get_local_size(0)) {
-        if (i0 < n_dims) {
-            int ic = i0/2;
+        if (i0 >= n_offs && i0 < n_offs + n_dims) {
+            int iw = i0 - n_offs; // relative idx
+            int ic = iw/2;
 
-            float theta = theta_base * pow(freq_base, inv_ndims*i0);
+            float theta = theta_base * pow(freq_base, inv_ndims*iw);
 
             float freq_factor = src2 != src0 ? src2[ic] : 1.0f;
 
-            float2 cos_sin_theta = rope_yarn(theta/freq_factor, freq_scale, corr_dims, i0, ext_factor, attn_factor);
+            float2 cos_sin_theta = rope_yarn(theta/freq_factor, freq_scale, corr_dims, iw, ext_factor, attn_factor);
 
             global half * src       = (global half *)((global char *) src0 + i3*nb03 + i2*nb02 + i1*nb01 + i0*nb00);
             global half * dst_data  = (global half *)((global char *)  dst + i3*nb3  + i2*nb2  + i1*nb1  + i0*nb0);
@@ -233,7 +237,8 @@ kernel void kernel_rope_neox_f32(
         float ext_factor,
         float attn_factor,
         float beta_fast,
-        float beta_slow
+        float beta_slow,
+        int n_offs
 ) {
     src0 = (global void*)((global char*)src0 + offset0);
     src1 = (global int*)((global char*)src1 + offset1);
@@ -252,17 +257,18 @@ kernel void kernel_rope_neox_f32(
     float inv_ndims = -1.f/n_dims;
 
     for (int i0 = 2*get_local_id(0); i0 < ne0; i0 += 2*get_local_size(0)) {
-        if (i0 < n_dims) {
-            int ic = i0/2;
+        if (i0 >= n_offs && i0 < n_offs + n_dims) {
+            int iw = i0 - n_offs; // relative idx
+            int ic = iw/2;
 
-            const float theta = theta_base * pow(freq_base, inv_ndims*i0);
+            const float theta = theta_base * pow(freq_base, inv_ndims*iw);
 
             const float freq_factor = src2 != src0 ? src2[ic] : 1.0f;
 
-            float2 cos_sin_theta = rope_yarn(theta/freq_factor, freq_scale, corr_dims, i0, ext_factor, attn_factor);
+            float2 cos_sin_theta = rope_yarn(theta/freq_factor, freq_scale, corr_dims, iw, ext_factor, attn_factor);
 
-            global float * src      = (global float *)((global char *) src0 + i3*nb03 + i2*nb02 + i1*nb01 + ic*nb00);
-            global float * dst_data = (global float *)((global char *)  dst + i3*nb3  + i2*nb2  + i1*nb1  + ic*nb0);
+            global float * src      = (global float *)((global char *) src0 + i3*nb03 + i2*nb02 + i1*nb01 + (n_offs + ic)*nb00);
+            global float * dst_data = (global float *)((global char *)  dst + i3*nb3  + i2*nb2  + i1*nb1  + (n_offs + ic)*nb0);
 
             const float x0 = src[0];
             const float x1 = src[n_dims/2];
@@ -312,7 +318,8 @@ kernel void kernel_rope_neox_f16(
         float ext_factor,
         float attn_factor,
         float beta_fast,
-        float beta_slow
+        float beta_slow,
+        int n_offs
 ) {
     src0 = (global void*)((global char*)src0 + offset0);
     src1 = (global int*)((global char*)src1 + offset1);
@@ -331,17 +338,18 @@ kernel void kernel_rope_neox_f16(
     float inv_ndims = -1.f/n_dims;
 
     for (int i0 = 2*get_local_id(0); i0 < ne0; i0 += 2*get_local_size(0)) {
-        if (i0 < n_dims) {
-            int ic = i0/2;
+        if (i0 >= n_offs && i0 < n_offs + n_dims) {
+            int iw = i0 - n_offs; // relative idx
+            int ic = iw/2;
 
-            const float theta = theta_base * pow(freq_base, inv_ndims*i0);
+            const float theta = theta_base * pow(freq_base, inv_ndims*iw);
 
             const float freq_factor = src2 != src0 ? src2[ic] : 1.0f;
 
-            float2 cos_sin_theta = rope_yarn(theta/freq_factor, freq_scale, corr_dims, i0, ext_factor, attn_factor);
+            float2 cos_sin_theta = rope_yarn(theta/freq_factor, freq_scale, corr_dims, iw, ext_factor, attn_factor);
 
-            global half * src       = (global half *)((global char *) src0 + i3*nb03 + i2*nb02 + i1*nb01 + ic*nb00);
-            global half * dst_data  = (global half *)((global char *)  dst + i3*nb3  + i2*nb2  + i1*nb1  + ic*nb0);
+            global half * src       = (global half *)((global char *) src0 + i3*nb03 + i2*nb02 + i1*nb01 + (n_offs + ic)*nb00);
+            global half * dst_data  = (global half *)((global char *)  dst + i3*nb3  + i2*nb2  + i1*nb1  + (n_offs + ic)*nb0);
 
             const float x0 = src[0];
             const float x1 = src[n_dims/2];
@@ -392,7 +400,9 @@ kernel void kernel_rope_multi_f32(
         float attn_factor,
         float beta_fast,
         float beta_slow,
-        int4 sections
+        int4 sections,
+        int  is_imrope,
+        int n_offs
 ) {
     src0 = (global void*)((global char*)src0 + offset0);
     src1 = (global int*)((global char*)src1 + offset1);
@@ -413,33 +423,46 @@ kernel void kernel_rope_multi_f32(
     float inv_ndims = -1.f/n_dims;
 
     for (int i0 = 2*get_local_id(0); i0 < ne0; i0 += 2*get_local_size(0)) {
-        if (i0 < n_dims) {
-            int ic = i0/2;
+        if (i0 >= n_offs && i0 < n_offs + n_dims) {
+            int iw = i0 - n_offs; // relative idx
+            int ic = iw/2;
 
-            const int sector = (i0 / 2) % sect_dims;
+            const int sector = ic % sect_dims;
             float theta_base = 0.0f;
 
-            if (sector < sections.s0) {
-                theta_base = pos[i2];
-            }
-            else if (sector >= sections.s0 && sector < sec_w) {
-                theta_base = pos[i2 + ne2 * 1];
-            }
-            else if (sector >= sec_w && sector < sec_w + sections.s2) {
-                theta_base = pos[i2 + ne2 * 2];
-            }
-            else if (sector >= sec_w + sections.s2) {
-                theta_base = pos[i2 + ne2 * 3];
+            if (is_imrope) {
+                if (sector % 3 == 1 && sector < 3 * sections.s1) { // h
+                    theta_base = (float) pos[i2 + ne02 * 1];
+                } else if (sector % 3 == 2 && sector < 3 * sections.s2) { // w
+                    theta_base = (float) pos[i2 + ne02 * 2];
+                } else if (sector % 3 == 0 && sector < 3 * sections.s0) { // t
+                    theta_base = (float) pos[i2 + ne02 * 0];
+                } else { // e
+                    theta_base = (float) pos[i2 + ne02 * 3];
+                }
+            } else {
+                if (sector < sections.s0) {
+                    theta_base = pos[i2];
+                }
+                else if (sector >= sections.s0 && sector < sec_w) {
+                    theta_base = pos[i2 + ne2 * 1];
+                }
+                else if (sector >= sec_w && sector < sec_w + sections.s2) {
+                    theta_base = pos[i2 + ne2 * 2];
+                }
+                else if (sector >= sec_w + sections.s2) {
+                    theta_base = pos[i2 + ne2 * 3];
+                }
             }
 
-            const float theta = theta_base * pow(freq_base, inv_ndims*i0);
+            const float theta = theta_base * pow(freq_base, inv_ndims*iw);
 
             const float freq_factor = src2 != src0 ? src2[ic] : 1.0f;
 
-            float2 cos_sin_theta = rope_yarn(theta/freq_factor, freq_scale, corr_dims, i0, ext_factor, attn_factor);
+            float2 cos_sin_theta = rope_yarn(theta/freq_factor, freq_scale, corr_dims, iw, ext_factor, attn_factor);
 
-            global float * src      = (global float *)((global char *) src0 + i3*nb03 + i2*nb02 + i1*nb01 + ic*nb00);
-            global float * dst_data = (global float *)((global char *)  dst + i3*nb3  + i2*nb2  + i1*nb1  + ic*nb0);
+            global float * src      = (global float *)((global char *) src0 + i3*nb03 + i2*nb02 + i1*nb01 + (n_offs + ic)*nb00);
+            global float * dst_data = (global float *)((global char *)  dst + i3*nb3  + i2*nb2  + i1*nb1  + (n_offs + ic)*nb0);
 
             const float x0 = src[0];
             const float x1 = src[n_dims/2];
@@ -490,7 +513,9 @@ kernel void kernel_rope_multi_f16(
         float attn_factor,
         float beta_fast,
         float beta_slow,
-        int4 sections
+        int4 sections,
+        int  is_imrope,
+        int n_offs
 ) {
     src0 = (global void*)((global char*)src0 + offset0);
     src1 = (global int*)((global char*)src1 + offset1);
@@ -511,33 +536,46 @@ kernel void kernel_rope_multi_f16(
     float inv_ndims = -1.f/n_dims;
 
     for (int i0 = 2*get_local_id(0); i0 < ne0; i0 += 2*get_local_size(0)) {
-        if (i0 < n_dims) {
-            int ic = i0/2;
+        if (i0 >= n_offs && i0 < n_offs + n_dims) {
+            int iw = i0 - n_offs; // relative idx
+            int ic = iw/2;
 
-            const int sector = (i0 / 2) % sect_dims;
+            const int sector = ic % sect_dims;
             float theta_base = 0.0f;
 
-            if (sector < sections.s0) {
-                theta_base = pos[i2];
-            }
-            else if (sector >= sections.s0 && sector < sec_w) {
-                theta_base = pos[i2 + ne2 * 1];
-            }
-            else if (sector >= sec_w && sector < sec_w + sections.s2) {
-                theta_base = pos[i2 + ne2 * 2];
-            }
-            else if (sector >= sec_w + sections.s2) {
-                theta_base = pos[i2 + ne2 * 3];
+            if (is_imrope) {
+                if (sector % 3 == 1 && sector < 3 * sections.s1) { // h
+                    theta_base = (float) pos[i2 + ne02 * 1];
+                } else if (sector % 3 == 2 && sector < 3 * sections.s2) { // w
+                    theta_base = (float) pos[i2 + ne02 * 2];
+                } else if (sector % 3 == 0 && sector < 3 * sections.s0) { // t
+                    theta_base = (float) pos[i2 + ne02 * 0];
+                } else { // e
+                    theta_base = (float) pos[i2 + ne02 * 3];
+                }
+            } else {
+                if (sector < sections.s0) {
+                    theta_base = pos[i2];
+                }
+                else if (sector >= sections.s0 && sector < sec_w) {
+                    theta_base = pos[i2 + ne2 * 1];
+                }
+                else if (sector >= sec_w && sector < sec_w + sections.s2) {
+                    theta_base = pos[i2 + ne2 * 2];
+                }
+                else if (sector >= sec_w + sections.s2) {
+                    theta_base = pos[i2 + ne2 * 3];
+                }
             }
 
-            const float theta = theta_base * pow(freq_base, inv_ndims*i0);
+            const float theta = theta_base * pow(freq_base, inv_ndims*iw);
 
             const float freq_factor = src2 != src0 ? src2[ic] : 1.0f;
 
-            float2 cos_sin_theta = rope_yarn(theta/freq_factor, freq_scale, corr_dims, i0, ext_factor, attn_factor);
+            float2 cos_sin_theta = rope_yarn(theta/freq_factor, freq_scale, corr_dims, iw, ext_factor, attn_factor);
 
-            global half * src      = (global half *)((global char *) src0 + i3*nb03 + i2*nb02 + i1*nb01 + ic*nb00);
-            global half * dst_data = (global half *)((global char *)  dst + i3*nb3  + i2*nb2  + i1*nb1  + ic*nb0);
+            global half * src      = (global half *)((global char *) src0 + i3*nb03 + i2*nb02 + i1*nb01 + (n_offs + ic)*nb00);
+            global half * dst_data = (global half *)((global char *)  dst + i3*nb3  + i2*nb2  + i1*nb1  + (n_offs + ic)*nb0);
 
             const float x0 = src[0];
             const float x1 = src[n_dims/2];
