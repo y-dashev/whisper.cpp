@@ -14,6 +14,7 @@
 /talk-llama.dSYM/
 
 build/
+/transcripts/
 build-*/
 build_*/
 tmp/

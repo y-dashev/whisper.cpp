@@ -28,10 +28,11 @@ struct whisper_params {
     float vad_thold    = 0.6f;
     float freq_thold   = 100.0f;
 
-    bool translate     = false;
-    bool no_fallback   = false;
-    bool print_special = false;
-    bool no_context    = true;
+    bool translate      = false;
+    bool print_progress = false;
+    bool no_fallback    = false;
+    bool print_special  = false;
+    bool no_context     = true;
     bool no_timestamps = false;
     bool tinydiarize   = false;
     bool save_audio    = false; // save audio to wav file
@@ -64,6 +65,7 @@ static bool whisper_params_parse(int argc, char ** argv, whisper_params & params
         else if (arg == "-vth"  || arg == "--vad-thold")     { params.vad_thold     = std::stof(argv[++i]); }
         else if (arg == "-fth"  || arg == "--freq-thold")    { params.freq_thold    = std::stof(argv[++i]); }
         else if (arg == "-tr"   || arg == "--translate")     { params.translate     = true; }
+        else if (arg == "-pp"   || arg == "--print-progress") { params.print_progress = true; }
         else if (arg == "-nf"   || arg == "--no-fallback")   { params.no_fallback   = true; }
         else if (arg == "-ps"   || arg == "--print-special") { params.print_special = true; }
         else if (arg == "-kc"   || arg == "--keep-context")  { params.no_context    = false; }
@@ -103,6 +105,7 @@ void whisper_print_usage(int /*argc*/, char ** argv, const whisper_params & para
     fprintf(stderr, "  -vth N,   --vad-thold N   [%-7.2f] voice activity detection threshold\n",           params.vad_thold);
     fprintf(stderr, "  -fth N,   --freq-thold N  [%-7.2f] high-pass frequency cutoff\n",                   params.freq_thold);
     fprintf(stderr, "  -tr,      --translate     [%-7s] translate from source language to english\n",      params.translate ? "true" : "false");
+    fprintf(stderr, "  -pp,      --print-progress [%-7s] print transcription progress\n",                    params.print_progress ? "true" : "false");
     fprintf(stderr, "  -nf,      --no-fallback   [%-7s] do not use temperature fallback while decoding\n", params.no_fallback ? "true" : "false");
     fprintf(stderr, "  -ps,      --print-special [%-7s] print special tokens\n",                           params.print_special ? "true" : "false");
     fprintf(stderr, "  -kc,      --keep-context  [%-7s] keep context between audio chunks\n",              params.no_context ? "false" : "true");
@@ -316,7 +319,7 @@ int main(int argc, char ** argv) {
         {
             whisper_full_params wparams = whisper_full_default_params(params.beam_size > 1 ? WHISPER_SAMPLING_BEAM_SEARCH : WHISPER_SAMPLING_GREEDY);
 
-            wparams.print_progress   = false;
+            wparams.print_progress   = params.print_progress;
             wparams.print_special    = params.print_special;
             wparams.print_realtime   = false;
             wparams.print_timestamps = !params.no_timestamps;

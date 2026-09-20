@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+binary="${repo_dir}/build/bin/whisper-ptt"
+model="${WHISPER_MODEL:-${repo_dir}/models/ggml-large-v3-turbo-q5_0.bin}"
+language="${1:-bg}"
+output="${2:-${repo_dir}/transcripts/transcript-$(date +%Y%m%d-%H%M%S).txt}"
+
+case "${language}" in
+    bg|en) ;;
+    -h|--help)
+        echo "Usage: whisper-dictate [bg|en] [output-file]"
+        echo "Example: whisper-dictate bg ~/Desktop/transcript.txt"
+        exit 0
+        ;;
+    *)
+        echo "Unsupported language '${language}'. Use bg or en." >&2
+        exit 2
+        ;;
+esac
+
+if [[ ! -x "${binary}" ]]; then
+    echo "whisper-ptt is not built: ${binary}" >&2
+    exit 1
+fi
+
+if [[ ! -f "${model}" ]]; then
+    echo "Whisper model is missing: ${model}" >&2
+    exit 1
+fi
+
+mkdir -p "$(dirname "${output}")"
+
+echo "Loading multilingual large-v3-turbo model..."
+echo "Language: ${language}"
+echo "Transcript: ${output}"
+echo "Space records; B selects Bulgarian, E English; C copies the last result; Q quits."
+echo
+
+exec "${binary}" \
+    -m "${model}" \
+    -l "${language}" \
+    -f "${output}" \
+    -ng
